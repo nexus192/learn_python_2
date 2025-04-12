@@ -1,26 +1,28 @@
-import examiners
-import students
-import curses
 from queue import Queue, Empty
+from collections import namedtuple
+import curses
 import time
 import threading
-import random
+import examiners
+import students
 
+LoadInfoResult = namedtuple("LoadInfoResult", [
+    "examiners", 
+    "students_list", 
+    "students_queue", 
+    "questions"
+])
 
-def load_data(file_path):
-  """Загружает данные из файла и возвращает список строк."""
+def load_data(file_path: str) -> list[str]:
   try:
     with open(file_path, 'r', encoding='utf-8') as f:
       return [line.strip() for line in f if line.strip()]
-  except FileNotFoundError:
-    raise FileNotFoundError(f"Файл {file_path} не найден")
-  except Exception as e:
-    raise Exception(f"Ошибка при чтении файла {file_path}: {str(e)}")
+  except FileNotFoundError as e:
+        raise FileNotFoundError(f"Файл {file_path} не найден") from e
+  except OSError as e:
+        raise OSError(f"Ошибка при чтении файла {file_path}: {str(e)}") from e
 
-
-def load_info():
-  """Загружает все необходимые данные из файлов."""
-  # Загрузка данных
+def load_info() -> LoadInfoResult:
   examiners_names = load_data(
       "/home/nexus/Desktop/s21_project/AP1-Py/TO2/learn_python_2/src/exercise1/input/examiners.txt"
   )
@@ -49,10 +51,9 @@ def load_info():
       examiners.Examiner(name, questions) for name in examiners_names
   ]
 
-  return list_examiners, students_list, students_queue, questions
+  return LoadInfoResult(list_examiners, students_list, students_queue, questions)
 
-
-def draw_examiners_table(stdscr, examiners, start_line):
+def draw_examiners_table(stdscr: curses.window, examiners: list[examiners.Examiner], start_line: int):
     stdscr.addstr(
         start_line, 0,
         "+-------------+-----------------+-----------------+---------+--------------+"
@@ -80,7 +81,7 @@ def draw_examiners_table(stdscr, examiners, start_line):
         "+-------------+-----------------+-----------------+---------+--------------+"
     )
 
-def draw_students_table(stdscr, students, start_line):
+def draw_students_table(stdscr: curses.window, students: list[students.Student], start_line: int):
     stdscr.addstr(start_line, 0, "+------------+----------+")
     stdscr.addstr(start_line + 1, 0, "| Студент    |  Статус  |")
     stdscr.addstr(start_line + 2, 0, "+------------+----------+")
@@ -97,44 +98,59 @@ def draw_students_table(stdscr, students, start_line):
     stdscr.addstr(start_line + len(students) + 3, 0, "+------------+----------+")
     return start_line + len(students) + 4
 
+def take_exam(examiner: examiners.Examiner, student: students.Student):
+  with examiner.lock:
+    examiner.current_student = student.name
+    examiner.total_students += 1
+    examiner.current_exam_start = time.time()
 
-def main(stdscr):
+  student.processing_exam(examiner.questions)
+
+  passed = examiner.evaluate_answers(student)
+
+  exam_time = examiner.exam_duration * len(examiner.name) / 6
+  time.sleep(exam_time)
+
+  with examiner.lock:
+    student.status = 1 if passed else 2
+    if not passed:
+      examiner.failed += 1
+    examiner.working_time += (time.time() - examiner.current_exam_start)
+    examiner.current_student = None
+
+def main(stdscr: curses.window):
   curses.curs_set(0)
   stdscr.nodelay(1)
 
-  list_examiners, list_students, students_queue, questions = load_info()
+  data = load_info()
   last_update = time.time()
-  update_interval = 0.1  # 10 раз в секунду
+  update_interval = 0.1
 
   try:
     while True:
       current_time = time.time()
 
-      # Распределяем студентов по свободным экзаменаторам
-      for examiner in list_examiners:
+      for examiner in data.examiners:
         if not examiner.is_on_break and examiner.current_student is None:
           try:
-            student = students_queue.get_nowait()
-            # Создаем новый поток для каждого экзамена
-            exam_thread = threading.Thread(target=examiner.take_exam,
-                                           args=(student,), daemon=True)
+            student = data.students_queue.get_nowait()
+            exam_thread = threading.Thread(target=take_exam,
+                                           args=(examiner, student,), daemon=True)
             exam_thread.start()
           except Empty:
             pass
 
-      # Обновляем интерфейс с заданной частотой
       if current_time - last_update >= update_interval:
         stdscr.clear()
-        current_line = draw_students_table(stdscr, list_students, 0)
-        draw_examiners_table(stdscr, list_examiners, current_line)
+        current_line = draw_students_table(stdscr, data.students_list, 0)
+        draw_examiners_table(stdscr, data.examiners, current_line)
         stdscr.refresh()
         last_update = current_time
 
-      time.sleep(0.01)  # Короткая пауза для снижения нагрузки на CPU
+      time.sleep(0.01)
 
   except KeyboardInterrupt:
     pass
-
 
 if __name__ == "__main__":
   curses.wrapper(main)

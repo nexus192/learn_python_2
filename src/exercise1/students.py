@@ -6,22 +6,22 @@ PHI = 1.618033988749895
 
 class Student:
 
-  def __init__(self, name, gender, status):
-    self.name = name
-    self.gender = gender
-    self.status = status
-    self.answers = []
-    self.lock = threading.Lock()
+  def __init__(self, name: str, gender: str, status: int):
+    self.name: str = name
+    self.gender: str = gender
+    self.status: int = status
+    self.answers: list[list[str]] = []
+    self.__lock: threading.Lock = threading.Lock()
 
-  def set_status(self, new_status):
-    with self.lock:
+  def set_status(self, new_status: int):
+    with self.__lock:
       self.status = new_status
 
   def get_status(self):
-    with self.lock:
+    with self.__lock:
       return self.status
 
-  def processing_exam(self, questions):
+  def processing_exam(self, questions: list[list[str]]):
     self.answers = []
 
     # Проверяем, что вопросов достаточно
@@ -40,7 +40,7 @@ class Student:
       selected_word = self._select_word(words)
       self.answers.append([selected_word, q_idx])
 
-  def _select_word(self, words):
+  def _select_word(self, words: list[str]) -> str:
     n = len(words)
     if n == 1:
       return words[0]

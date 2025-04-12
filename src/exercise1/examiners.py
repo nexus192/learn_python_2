@@ -3,7 +3,7 @@ import time
 import threading
 from enum import Enum
 
-PHI = 1.618033988749895  # Золотое сечение
+PHI = 1.618033988749895
 
 
 class Mood(Enum):
@@ -14,27 +14,44 @@ class Mood(Enum):
 
 class Examiner:
 
-  def __init__(self, name, questions):
-    self.name = name
-    self.questions = questions
-    self.mood = self._set_mood()
-    self.current_student = None
-    self.total_students = 0
-    self.failed = 0
-    self.working_time = 0.0
-    self.current_exam_start = 0
-    self.right_ans = []
-    self.is_on_break = False
-    self.lock = threading.Lock()
-    self.start_time = time.time()
-    self.GeneratingAnswers(questions)
-    self.exam_duration = random.uniform(5, 7)  # Базовое время экзамена
-    self.lock = threading.Lock()
+  def __init__(self, name: str, questions: list[str]):
+    self.name: str = name
+    self.total_students: int = 0
+    self.current_student: str | None = None
+    self.failed: int = 0
+    self.working_time: float = 0.0
+    self.questions: list[str] = questions
+    self.current_exam_start: int = 0
+    self.__right_ans: list[list[str]] = []
+    self.__mood: Mood = self._set_mood()
+    self.__is_on_break: bool = False
+    self.__exam_duration: float = random.uniform(5, 7)
+    self.__lock = threading.Lock()
+    self.GeneratingAnswers()
+
+  @property
+  def is_on_break(self):
+    return self.__is_on_break
+
+  @property
+  def exam_duration(self) -> float:
+    return self.__exam_duration
+
+  @exam_duration.setter
+  def exam_duration(self, exam_duration: float):
+    self.__exam_duration = exam_duration
+
+  @property
+  def lock(self) -> threading.Lock:
+    return self.__lock
+
+  @lock.setter
+  def lock(self, lock: threading.Lock):
+    self.__lock = lock
 
   def get_current_state(self):
     with self.lock:
       current_time = time.time()
-      # Рассчитываем текущее время работы (включая текущий экзамен)
       if self.current_student:
         total_working = self.working_time + (current_time -
                                              self.current_exam_start)
@@ -49,7 +66,7 @@ class Examiner:
           'working_time': total_working
       }
 
-  def _set_mood(self):
+  def _set_mood(self) -> Mood:
     mood_prob = random.random()
     if mood_prob < 1 / 8:
       return Mood.Bad
@@ -57,12 +74,12 @@ class Examiner:
       return Mood.Good
     return Mood.Neutral
 
-  def GeneratingAnswers(self, questions):
-    self.right_ans = []
-    for question in questions:
+  def GeneratingAnswers(self):
+    self.__right_ans = []
+    for question in self.questions:
       words = question.split()
       if not words:
-        self.right_ans.append([])
+        self.__right_ans.append([])
         continue
 
       selected_words = []
@@ -76,9 +93,9 @@ class Examiner:
         idx = self._select_word_index(len(remaining_words))
         selected_words.append(remaining_words.pop(idx))
 
-      self.right_ans.append(selected_words)
+      self.__right_ans.append(selected_words)
 
-  def _select_word_index(self, num_words):
+  def _select_word_index(self, num_words: int) -> int:
     if num_words == 1:
       return 0
 
@@ -101,44 +118,18 @@ class Examiner:
         return i
     return num_words - 1
 
-  def take_exam(self, student):
-    with self.lock:
-      self.current_student = student.name
-      self.total_students += 1
-      self.current_exam_start = time.time()
-
-    # Студент сдает экзамен (выбирает ответы)
-    student.processing_exam(self.questions)
-
-    # Проверяем ответы (но пока не меняем статус)
-    passed = self.evaluate_answers(student)
-
-    # Время экзамена зависит от длины имени экзаменатора
-    exam_time = self.exam_duration * len(self.name) / 6
-    time.sleep(exam_time)  # Имитируем процесс экзамена
-
-    # Только после завершения времени экзамена обновляем статус
-    with self.lock:
-      student.status = 1 if passed else 2
-      if not passed:
-        self.failed += 1
-      self.working_time += (time.time() - self.current_exam_start)
-      self.current_student = None
-
-  def evaluate_answers(self, student):
-    # Проверяем настроение
-    if self.mood == Mood.Good:
+  def evaluate_answers(self, student) -> bool:
+    if self.__mood == Mood.Good:
       return True
-    elif self.mood == Mood.Bad:
+    elif self.__mood == Mood.Bad:
       return False
 
-    # Нейтральное настроение - объективная проверка
     correct = 0
     total = 0
 
     for answer in student.answers:
       word, q_idx = answer
-      if word in self.right_ans[q_idx]:
+      if word in self.__right_ans[q_idx]:
         correct += 1
       total += 1
 
