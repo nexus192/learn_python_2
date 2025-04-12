@@ -13,11 +13,15 @@ class Student:
     self.answers = []
     self.lock = threading.Lock()
 
+  def set_status(self, new_status):
+    with self.lock:
+      self.status = new_status
+
   def get_status(self):
     with self.lock:
       return self.status
 
-  def take_exam(self, questions):
+  def processing_exam(self, questions):
     self.answers = []
 
     # Проверяем, что вопросов достаточно

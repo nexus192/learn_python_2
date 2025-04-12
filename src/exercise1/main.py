@@ -53,50 +53,49 @@ def load_info():
 
 
 def draw_examiners_table(stdscr, examiners, start_line):
-  stdscr.addstr(
-      start_line, 0,
-      "+-------------+-----------------+-----------------+---------+--------------+"
-  )
-  stdscr.addstr(
-      start_line + 1, 0,
-      "| Экзаменатор | Текущий студент | Всего студентов | Завалил | Время работы |"
-  )
-  stdscr.addstr(
-      start_line + 2, 0,
-      "+-------------+-----------------+-----------------+---------+--------------+"
-  )
-
-  for i, examiner in enumerate(examiners, start=3):
-    name = examiner.name[:11].ljust(11)
-    current = examiner.current_student[:15].ljust(
-        15) if examiner.current_student else '-'.ljust(15)
     stdscr.addstr(
-        start_line + i, 0,
-        f"| {name} | {current} | {str(examiner.total_students).ljust(15)} | {str(examiner.failed).ljust(7)} | {f'{examiner.working_time:.1f}c'.ljust(12)} |"
+        start_line, 0,
+        "+-------------+-----------------+-----------------+---------+--------------+"
+    )
+    stdscr.addstr(
+        start_line + 1, 0,
+        "| Экзаменатор | Текущий студент | Всего студентов | Завалил | Время работы |"
+    )
+    stdscr.addstr(
+        start_line + 2, 0,
+        "+-------------+-----------------+-----------------+---------+--------------+"
     )
 
-  stdscr.addstr(
-      start_line + len(examiners) + 3, 0,
-      "+-------------+-----------------+-----------------+---------+--------------+"
-  )
+    for i, examiner in enumerate(examiners, start=3):
+        state = examiner.get_current_state()
+        name = state['name'][:11].ljust(11)
+        current = state['current_student'][:15].ljust(15) if state['current_student'] else '-'.ljust(15)
+        stdscr.addstr(
+            start_line + i, 0,
+            f"| {name} | {current} | {str(state['total_students']).ljust(15)} | {str(state['failed']).ljust(7)} | {f'{state["working_time"]:.1f}c'.ljust(12)} |"
+        )
 
+    stdscr.addstr(
+        start_line + len(examiners) + 3, 0,
+        "+-------------+-----------------+-----------------+---------+--------------+"
+    )
 
 def draw_students_table(stdscr, students, start_line):
-  stdscr.addstr(start_line, 0, "+------------+----------+")
-  stdscr.addstr(start_line + 1, 0, "| Студент    |  Статус  |")
-  stdscr.addstr(start_line + 2, 0, "+------------+----------+")
+    stdscr.addstr(start_line, 0, "+------------+----------+")
+    stdscr.addstr(start_line + 1, 0, "| Студент    |  Статус  |")
+    stdscr.addstr(start_line + 2, 0, "+------------+----------+")
 
-  for i, student in enumerate(students, start=3):
-    name = student.name[:10].ljust(10)
-    status_text = {
-        0: "Очередь",
-        1: "Сдал",
-        2: "Провалил"
-    }.get(student.status, "Неизвестно")
-    stdscr.addstr(start_line + i, 0, f"| {name} | {status_text.center(8)} |")
+    for i, student in enumerate(students, start=3):
+        name = student.name[:10].ljust(10)
+        status_text = {
+            0: "Очередь",
+            1: "Сдал",
+            2: "Провалил"
+        }.get(student.get_status(), "Неизвестно")
+        stdscr.addstr(start_line + i, 0, f"| {name} | {status_text.center(8)} |")
 
-  stdscr.addstr(start_line + len(students) + 3, 0, "+------------+----------+")
-  return start_line + len(students) + 4
+    stdscr.addstr(start_line + len(students) + 3, 0, "+------------+----------+")
+    return start_line + len(students) + 4
 
 
 def main(stdscr):
@@ -118,8 +117,7 @@ def main(stdscr):
             student = students_queue.get_nowait()
             # Создаем новый поток для каждого экзамена
             exam_thread = threading.Thread(target=examiner.take_exam,
-                                           args=(student,))
-            exam_thread.daemon = True  # Поток не будет мешать завершению программы
+                                           args=(student,), daemon=True)
             exam_thread.start()
           except Empty:
             pass

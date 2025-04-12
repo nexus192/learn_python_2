@@ -22,6 +22,7 @@ class Examiner:
     self.total_students = 0
     self.failed = 0
     self.working_time = 0.0
+    self.current_exam_start = 0
     self.right_ans = []
     self.is_on_break = False
     self.lock = threading.Lock()
@@ -32,12 +33,20 @@ class Examiner:
 
   def get_current_state(self):
     with self.lock:
+      current_time = time.time()
+      # Рассчитываем текущее время работы (включая текущий экзамен)
+      if self.current_student:
+        total_working = self.working_time + (current_time -
+                                             self.current_exam_start)
+      else:
+        total_working = self.working_time
+
       return {
           'name': self.name,
           'current_student': self.current_student,
           'total_students': self.total_students,
           'failed': self.failed,
-          'working_time': self.working_time
+          'working_time': total_working
       }
 
   def _set_mood(self):
@@ -96,26 +105,24 @@ class Examiner:
     with self.lock:
       self.current_student = student.name
       self.total_students += 1
+      self.current_exam_start = time.time()
 
-    # Студент сдает экзамен
-    student.take_exam(self.questions)
+    # Студент сдает экзамен (выбирает ответы)
+    student.processing_exam(self.questions)
 
-    # Проверяем ответы
+    # Проверяем ответы (но пока не меняем статус)
     passed = self.evaluate_answers(student)
 
-    # Обновляем статус студента
-    student.status = 1 if passed else 2
-    if not passed:
-      with self.lock:
-        self.failed += 1
-
     # Время экзамена зависит от длины имени экзаменатора
-    exam_time = self.exam_duration * len(
-        self.name) / 6  # Нормализуем к длине "Степан" (6 букв)
-    time.sleep(exam_time)
+    exam_time = self.exam_duration * len(self.name) / 6
+    time.sleep(exam_time)  # Имитируем процесс экзамена
 
+    # Только после завершения времени экзамена обновляем статус
     with self.lock:
-      self.working_time += exam_time
+      student.status = 1 if passed else 2
+      if not passed:
+        self.failed += 1
+      self.working_time += (time.time() - self.current_exam_start)
       self.current_student = None
 
   def evaluate_answers(self, student):
@@ -136,19 +143,3 @@ class Examiner:
       total += 1
 
     return correct > (total - correct)
-
-  def work(self):
-    while True:
-      # Проверяем, не пора ли на обед
-      elapsed = time.time() - self.start_time
-      if elapsed >= 30 and not self.is_on_break:
-        self.is_on_break = True
-        # Завершаем текущего студента
-        if self.current_student:
-          time.sleep(1)  # Даем закончить текущему
-        # Обеденный перерыв
-        break_time = random.uniform(12, 18)
-        time.sleep(break_time)
-        self.is_on_break = False
-        self.start_time = time.time()  # Сбрасываем таймер
-        self.mood = self._set_mood()  # Может измениться настроение
