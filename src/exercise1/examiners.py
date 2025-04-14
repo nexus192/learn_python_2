@@ -21,11 +21,12 @@ class Examiner:
     self.failed: int = 0
     self.working_time: float = 0.0
     self.questions: list[str] = questions
+    self.question_stats = {question: 0 for question in questions}
     self.current_exam_start: int = 0
     self.__right_ans: list[list[str]] = []
     self.__mood: Mood = self._set_mood()
     self.__is_on_break: bool = False
-    self.__exam_duration: float = random.uniform(5, 7)
+    # self.__exam_duration: float = random.uniform(5, 7)
     self.__lock = threading.Lock()
     self.GeneratingAnswers()
 
@@ -33,13 +34,13 @@ class Examiner:
   def is_on_break(self):
     return self.__is_on_break
 
-  @property
-  def exam_duration(self) -> float:
-    return self.__exam_duration
+  # @property
+  # def exam_duration(self) -> float:
+  #   # return self.__exam_duration
 
-  @exam_duration.setter
-  def exam_duration(self, exam_duration: float):
-    self.__exam_duration = exam_duration
+  # @exam_duration.setter
+  # def exam_duration(self, exam_duration: float):
+  #   # self.__exam_duration = exam_duration
 
   @property
   def lock(self) -> threading.Lock:
@@ -120,17 +121,22 @@ class Examiner:
 
   def evaluate_answers(self, student) -> bool:
     if self.__mood == Mood.Good:
+      # Все ответы считаем правильными
+      for q_idx in range(len(self.questions)):
+        question = self.questions[q_idx]
+        self.question_stats[question] += 1
       return True
     elif self.__mood == Mood.Bad:
+      # Все ответы считаем неправильными
       return False
 
     correct = 0
-    total = 0
-
     for answer in student.answers:
       word, q_idx = answer
+      question = self.questions[q_idx]
       if word in self.__right_ans[q_idx]:
         correct += 1
-      total += 1
+        self.question_stats[
+            question] += 1  # Увеличиваем счетчик правильных ответов
 
-    return correct > (total - correct)
+    return correct > (len(student.answers)) - correct
