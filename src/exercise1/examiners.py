@@ -26,21 +26,12 @@ class Examiner:
     self.__right_ans: list[list[str]] = []
     self.__mood: Mood = self._set_mood()
     self.__is_on_break: bool = False
-    # self.__exam_duration: float = random.uniform(5, 7)
     self.__lock = threading.Lock()
     self.GeneratingAnswers()
 
   @property
   def is_on_break(self):
     return self.__is_on_break
-
-  # @property
-  # def exam_duration(self) -> float:
-  #   # return self.__exam_duration
-
-  # @exam_duration.setter
-  # def exam_duration(self, exam_duration: float):
-  #   # self.__exam_duration = exam_duration
 
   @property
   def lock(self) -> threading.Lock:

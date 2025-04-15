@@ -40,7 +40,7 @@ def load_info() -> LoadInfoResult:
   students_queue = Queue()
   for line in students_data:
     parts = line.split()
-    if len(parts) >= 2:  # Минимум имя и пол
+    if len(parts) >= 2: 
       name = parts[0]
       gender = parts[1]
       status = int(parts[2]) if len(parts) > 2 else 0
@@ -52,8 +52,8 @@ def load_info() -> LoadInfoResult:
   list_examiners = []
   for line in examiners_data:
     parts = line.split()
-    if len(parts) >= 2:  # Минимум имя и пол
-      name = parts[0]  # Берём только имя без пола
+    if len(parts) >= 2: 
+      name = parts[0]
       examiner = examiners.Examiner(name, questions)
       list_examiners.append(examiner)
 
@@ -124,17 +124,13 @@ def take_exam(global_state: general_state.GeneralState, examiner: examiners.Exam
     examiner.total_students += 1
     examiner.current_exam_start = time.time()
 
-  # Студент проходит экзамен (формирует свои ответы)
   student.processing_exam(examiner.questions)
 
-  # Проверка ответов и определение результата
   passed = examiner.evaluate_answers(student)
 
-  # Расчет времени экзамена (зависит от длины имени экзаменатора)
-  # exam_time = examiner.exam_duration * len(examiner.name) / 6
   len_name_examiner = len(examiner.name)
   random_time_work = random.uniform(len_name_examiner - 1, len_name_examiner + 1)
-  time.sleep(random_time_work)  # Имитация времени экзамена
+  time.sleep(random_time_work)
 
   with examiner.lock:
     student.status = 1 if passed else 2
@@ -145,14 +141,11 @@ def take_exam(global_state: general_state.GeneralState, examiner: examiners.Exam
       examiner.failed += 1
       global_state.worst_students.append((student.name, random_time_work))
     
-    # Обновляем статистику экзаменатора
     examiner.working_time += (time.time() - examiner.current_exam_start)
     examiner.current_student = None
     
-    # Обновляем статистику по экзаменатору
     global_state.update_examiner_stats(examiner.name, not passed)
     
-    # Уменьшаем счетчик оставшихся студентов
     global_state.remaining_students -= 1
 
 def main(stdscr: curses.window):

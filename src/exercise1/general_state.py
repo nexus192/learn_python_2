@@ -1,19 +1,19 @@
 class GeneralState:
 
   def __init__(self, students_list):
-    self.state_student = [[student.name,
-                           student.get_status(), 1000.0]
-                          for student in students_list]
-    self.best_examiners = []
-    self.best_students = []
-    self.best_questions = []
-    self.worst_students = []
-    self.remaining_students = len(students_list)
-    self.total_exam_status = False
-    self.examiners_stats = {}  # Для хранения статистики экзаменаторов
-    self.questions_stats = {}
+    self.state_student: list[list[str, int, float]] = [[
+        student.name, student.get_status(), 1000.0
+    ] for student in students_list]
+    self.best_examiners: list[str] = []
+    self.best_students: list[str] = []
+    self.best_questions: list[str] = []
+    self.worst_students: list[str] = []
+    self.remaining_students: int = len(students_list)
+    self.total_exam_status: bool = False
+    self.examiners_stats: dict[str, dict[str, int]] = {}
+    self.questions_stats: dict[str, dict[str, int]] = {}
 
-  def update_student(self, name, status, exam_time):
+  def update_student(self, name: str, status: int, exam_time: float):
     for student in self.state_student:
       if student[0] == name:
         student[1] = status
