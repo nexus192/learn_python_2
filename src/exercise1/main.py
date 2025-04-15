@@ -48,7 +48,6 @@ def load_info() -> LoadInfoResult:
       students_list.append(student)
       students_queue.put(student)
 
-  # Создание экзаменаторов
   list_examiners = []
   for line in examiners_data:
     parts = line.split()
